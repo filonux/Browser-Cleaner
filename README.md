@@ -14,6 +14,8 @@ Con el uso, cualquier navegador acumula caché, historial, cookies, sesiones y a
 
 Browser-Cleaner detecta qué navegadores tienes instalados, te deja elegir cuáles y qué limpiar, y te dice cuánto espacio vas a recuperar antes de borrar nada.
 
+<img width="655" height="435" alt="browser-cleaner-menu" src="https://github.com/user-attachments/assets/9039ec58-c20b-47d6-ba8d-99fdc039e010" />
+
 ## Qué hace exactamente
 
 - Detecta automáticamente los navegadores instalados — como paquete `.deb` nativo, Flatpak o Snap — y cuántos perfiles tiene cada uno.
