@@ -1,4 +1,4 @@
-[![Icono de Browser-Cleaner](assets/icon.png)](assets/icon.png)
+<img src="assets/icon.png" width="140" height="140">
 
 # Browser-Cleaner
 
