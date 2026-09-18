@@ -2,99 +2,103 @@
 
 # Browser-Cleaner
 
-Limpiador interactivo de navegadores para Linux: detecta lo que tienes instalado, te deja elegir qué borrar, y nunca toca lo que te identifica como usuario — perfiles, marcadores, contraseñas o extensiones.
+Interactive browser cleaner for Linux: it detects what you have installed, lets you choose what to delete, and never touches your user data — profiles, bookmarks, passwords or extensions.
 
-![Bash 4+](https://img.shields.io/badge/bash-%3E%3D4.0-4EAA25?logo=gnubash&logoColor=white) ![Linux Mint 22.3 Cinnamon](https://img.shields.io/badge/Linux%20Mint-22.3%20Cinnamon-87CF3E?logo=linuxmint&logoColor=white) ![Licencia GPLv3](https://img.shields.io/badge/licencia-GPLv3-blue)
+[Español](README.es.md)
+
+![Bash 4+](https://img.shields.io/badge/bash-%3E%3D4.0-4EAA25?logo=gnubash&logoColor=white) ![Linux Mint 22.3 Cinnamon](https://img.shields.io/badge/Linux%20Mint-22.3%20Cinnamon-87CF3E?logo=linuxmint&logoColor=white) ![GPLv3 License](https://img.shields.io/badge/license-GPLv3-blue)
 
 ---
 
-## El problema que resuelve
+## The problem it solves
 
-Con el uso, cualquier navegador acumula caché, historial, cookies, sesiones y archivos temporales que solo ocupan espacio y no aportan nada. Limpiarlo a mano implica entrar en los ajustes de cada navegador por separado — y si usas varios, repetir el proceso en cada uno. Las herramientas genéricas de "limpieza del sistema", por su parte, no siempre dejan claro qué tocan exactamente, con el riesgo real de llevarse por delante marcadores o sesiones guardadas.
+Over time, every browser accumulates cache, history, cookies, sessions and temporary files that only take up space and provide nothing useful. Cleaning them by hand means opening each browser's settings separately — and if you use several, repeating the process in each one. Generic "system cleaning" tools, on the other hand, do not always make it clear exactly what they touch, creating a real risk of deleting bookmarks or saved sessions.
 
-Browser-Cleaner detecta qué navegadores tienes instalados, te deja elegir cuáles y qué limpiar, y te dice cuánto espacio vas a recuperar antes de borrar nada.
+Browser-Cleaner detects which browsers you have installed, lets you choose which ones and what to clean, and tells you how much space you are going to recover before deleting anything.
 
 <img width="655" height="435" alt="browser-cleaner-menu" src="https://github.com/user-attachments/assets/9039ec58-c20b-47d6-ba8d-99fdc039e010" />
 
-## Qué hace exactamente
+## What it does exactly
 
-- Detecta automáticamente los navegadores instalados — como paquete `.deb` nativo, Flatpak o Snap — y cuántos perfiles tiene cada uno.
-- Seis tipos de limpieza a elegir: rápida, completa, profunda, o solo caché, cookies o historial (ver [Tipos de limpieza](#tipos-de-limpieza)).
-- Vista previa y confirmación explícita antes de cualquier borrado irreversible.
-- Copia de seguridad automática de los archivos críticos antes de tocarlos.
-- Comprueba que el navegador esté cerrado antes de limpiar sus perfiles, para no corromper nada a medio escribir.
-- Si faltan `sqlite3` o `jq` — se usan para depurar historial, formularios y permisos con precisión — se ofrece instalarlos con `apt` automáticamente; si rechazas o falla, simplemente se omite esa parte sin abortar el resto.
-- No está pensado para ejecutarse como root: limpia el `$HOME` de tu propio usuario, y avisa si lo lanzas con `sudo` por error.
-- Registra cada sesión (fecha, qué se limpió, cuánto se liberó) en `~/.cache/browser-cleaner/browser-cleaner.log`.
-- Interfaz de terminal clara, con spinner de progreso y tablas-resumen del espacio liberado por categoría y navegador.
+- Automatically detects supported browser profiles in native, Flatpak or Snap layouts and how many profiles each one has.
+- Six cleaning types to choose from: quick, complete, cache only, cookies only, history only or deep (see [Cleaning types](#cleaning-types)).
+- Preview and explicit confirmation before any irreversible deletion.
+- Automatically backs up critical files before modifying them.
+- Checks that the browser is closed before cleaning its profiles, to avoid corrupting anything while it is still writing.
+- If `sqlite3` or `jq` are missing — they are used to clean history, form data and permissions precisely — it offers to install them with `apt` automatically; if you decline or installation fails, that part is simply skipped without aborting the rest.
+- It is not intended to run as root: it cleans your own `$HOME`, and warns you if you launch it with `sudo` by mistake.
+- Logs each session (date, what was cleaned, how much space was freed) to `~/.cache/browser-cleaner/browser-cleaner.log`.
+- Clear terminal interface with a progress spinner and summary tables showing recovered space by category and browser.
 
-## Ventajas
+## Advantages
 
-La mayoría de limpiadores tratan el navegador como una carpeta más: borran por antigüedad o por tamaño, sin distinguir qué es tuyo y qué es basura. Browser-Cleaner parte de una regla fija, no de heurísticas: se conserva todo lo que te identifica como usuario, se elimina solo lo que el navegador puede regenerar por sí solo o lo que es simple residuo de navegar.
+Most cleaners treat the browser like just another folder: they delete by age or size, without distinguishing what belongs to you from what is disposable. Browser-Cleaner follows a fixed rule rather than heuristics: it preserves everything that identifies you as a user, and deletes only what the browser can regenerate on its own or what is simply browsing residue.
 
-| Se conserva siempre | Se elimina (según lo que elijas) |
+| Always preserved | Deleted (depending on your choice) |
 |---|---|
-| Perfiles y su configuración | Caché y miniaturas |
-| Marcadores | Historial de navegación |
-| Contraseñas guardadas | Cookies |
-| Extensiones | Almacenamiento web, formularios y sesiones |
-| Temas | Favicons |
-| Certificados | Logs y volcados de fallos |
-| Motores de búsqueda | Telemetría y archivos temporales |
-| Ajustes de sincronización | Archivos de bloqueo obsoletos y WAL/SHM huérfanos |
+| Profiles and configuration | Cache and thumbnails |
+| Bookmarks | Browsing history |
+| Saved passwords | Cookies |
+| Extensions | Origin-scoped web storage, form data and sessions |
+| Themes | Favicons |
+| Certificates | Logs and crash dumps |
+| Search engines | Telemetry and temporary files |
+| Sync settings | Obsolete lock files and orphan WAL/SHM |
 
-Esa regla se refuerza con tres capas de seguridad adicionales:
+Chromium storage cleanup is deliberately limited to origin-scoped stores such as IndexedDB and legacy WebSQL. Shared LevelDB-backed stores such as Local Storage and Service Worker data are left untouched because they can also contain extension state.
 
-- **Vista previa antes de borrar** — en las limpiezas irreversibles calcula primero cuánto espacio liberaría, sin tocar ningún archivo, y solo continúa si lo confirmas explícitamente.
-- **Copia de seguridad automática** — antes de tocar `places.sqlite`, `Web Data` o `Preferences`, guarda un `.bak` por si algo sale mal.
-- **Nunca como root** — limpia el `$HOME` de tu propio usuario, nunca el sistema, y avisa si lo lanzas con `sudo` por error.
+That rule is reinforced by three additional safety layers:
 
-## Tipos de limpieza
+- **Preview before deletion** — irreversible cleanings first calculate how much space would be freed without touching any file, and continue only if you explicitly confirm.
+- **Automatic backup** — before touching `places.sqlite`, `Web Data` or `Preferences`, it saves a `.bak` copy in case something goes wrong.
+- **Never as root** — it cleans your own `$HOME`, never the system, and warns you if you launch it as root.
 
-| Tipo | Qué incluye |
+## Cleaning types
+
+| Type | What it includes |
 |---|---|
-| Limpieza rápida | Caché, miniaturas e informes de fallos |
-| Solo cachés | Caché (y caché de componentes/extensiones en navegadores Chromium) |
-| Solo cookies | Cookies |
-| Solo historial | Historial de navegación |
-| Limpieza completa | Rápida + historial, cookies, sesiones y formularios |
-| Limpieza profunda | Completa + permisos de sitios web y estado de seguridad (HSTS/NEL) |
+| Quick cleaning | Cache, thumbnails and crash reports |
+| Cache only | Cache (and component/extension cache in Chromium browsers) |
+| Cookies only | Cookies |
+| History only | Browsing history |
+| Complete cleaning | Quick + history, cookies, sessions and form data |
+| Deep cleaning | Complete + website permissions and security state (HSTS/NEL) on Firefox/Chromium; same as Complete on Falkon/Epiphany |
 
-Historial, cookies, completa y profunda son irreversibles: antes de aplicarlas se muestra una vista previa del espacio que se liberaría, y hay que confirmar explícitamente para continuar.
+History-only, cookies-only, complete, and deep cleaning types are irreversible: before applying them, a preview shows how much space would be freed, and you must explicitly confirm to continue.
 
-## Navegadores compatibles
+## Supported browsers
 
-| Motor | Navegadores |
+| Engine | Browsers |
 |---|---|
 | Firefox | Firefox, LibreWolf, Tor Browser, Waterfox, Floorp, Zen Browser |
 | Chromium | Chromium, Google Chrome, Brave, Vivaldi, Opera, Edge |
 | QtWebEngine | Falkon |
 | WebKitGTK | GNOME Web (Epiphany) |
 
-Cada uno se detecta ya sea como paquete `.deb` nativo, Flatpak o Snap — Mint no trae Snap de fábrica, pero si lo instalaste a mano también se detecta. Si tienes varios perfiles en el mismo navegador, Browser-Cleaner los limpia todos.
+Each browser is detected from its native, Flatpak or Snap profile layout — Mint does not ship with Snap by default, but supported Snap profiles are detected if present. If you have several profiles in the same browser, Browser-Cleaner cleans all of them.
 
-## Instalación
+## Installation
 
 ```bash
 git clone https://github.com/filonux/Browser-Cleaner.git
-cd browser-cleaner/script
+cd Browser-Cleaner/script
 chmod +x browser-cleaner.sh
 ./browser-cleaner.sh
 ```
 
-## Comandos
+## Commands
 
-El modo por defecto (sin argumentos) es interactivo: detecta tus navegadores, eliges cuáles limpiar y qué tipo de limpieza aplicar mediante menús numerados.
+The default mode (no arguments) is interactive: it detects your browsers, you choose which ones to clean and what type of cleaning to apply through numbered menus.
 
-| Comando | Qué hace |
+| Command | What it does |
 |---|---|
-| `./browser-cleaner.sh` | Abre el menú interactivo |
-| `./browser-cleaner.sh --help` | Muestra la ayuda y termina |
-| `./browser-cleaner.sh --version` | Muestra la versión instalada y termina |
+| `./browser-cleaner.sh` | Opens the interactive menu |
+| `./browser-cleaner.sh --help` | Shows the help and exits |
+| `./browser-cleaner.sh --version` | Shows the installed version and exits |
 
-## Úsalo con Scriptya
+## Use it with Scriptya
 
-Si prefieres no depender de la terminal para lanzarlo, [**Scriptya**](https://github.com/filonux/Scriptya) —otra herramienta de Filonux— convierte Browser-Cleaner (o cualquier otro script) en una app independiente: con su propio icono, integrada en el menú de aplicaciones de Cinnamon y/o en el Escritorio, y con un único menú desde el que lanzarlo, actualizarlo o desinstalarlo.
+If you prefer not to depend on the terminal to launch it, [**Scriptya**](https://github.com/filonux/Scriptya) — another Filonux tool — turns Browser-Cleaner (or any other script) into a standalone app: with its own icon, integrated into the Cinnamon applications menu and/or Desktop, and with a single menu from which you can launch, update or uninstall it.
 
 ```bash
 git clone https://github.com/filonux/Scriptya.git
@@ -103,38 +107,52 @@ chmod +x scriptya.sh
 ./scriptya.sh --icons
 ```
 
-El asistente te deja elegir `browser-cleaner.sh` y asignarle un icono — puedes usar directamente el que trae este repositorio en `assets/icon.png`.
+The assistant lets you select `browser-cleaner.sh` and assign it an icon — you can use the one included in this repository: `assets/icon.png`.
 
-## Compatibilidad
+## Compatibility
 
-Probado en Linux Mint 22.3 Cinnamon. El script solo usa Bash, coreutils y las rutas de configuración estándar de cada navegador (`~/.mozilla`, `~/.config/...`, `~/.var/app/...` para Flatpak), así que debería funcionar igual en cualquier distro basada en Ubuntu/Debian y, en general, en cualquier distro con Bash 4+ — aunque de momento solo está verificado en Mint/Cinnamon.
+Tested on Linux Mint 22.3 Cinnamon. The script only uses Bash, standard Linux userland utilities and each browser's standard configuration paths (`~/.mozilla`, `~/.config/...`, `~/.var/app/...` for Flatpak), so it should work the same on any Ubuntu/Debian-based distro and, in general, on any distro with Bash 4+ — although it is currently only verified on Mint/Cinnamon.
 
-La única parte atada a Debian/Ubuntu es la instalación automática de dependencias opcionales, que usa `apt`. En distros con otro gestor de paquetes esa instalación automática no se ofrece, pero si `sqlite3` y `jq` ya están instalados —o los instalas tú a mano— el resto funciona exactamente igual. Si no están, simplemente se omiten las categorías de limpieza que los necesitan, sin errores.
+The only Debian/Ubuntu-specific part is the optional dependency installer, which uses `apt`. On distros with another package manager, automatic installation is not available, but if `sqlite3` and `jq` are already installed — or you install them manually — the rest works exactly the same. If they are not present, the categories that need them are simply skipped without errors.
 
-| Herramienta | Para qué | Si falta |
+| Tool | What it is for | If missing |
 |---|---|---|
-| `sqlite3` | Depurar historial, formularios y permisos sin arriesgar marcadores ni motores de búsqueda | Se ofrece instalar vía `apt`; si no, se omite esa categoría |
-| `jq` | Depurar permisos de sitios web sin tocar el resto de la configuración | Igual que `sqlite3` |
+| `sqlite3` | Cleaning history, form data and permissions without risking bookmarks or search engines | Offered for installation via `apt`; if declined, that category is skipped |
+| `jq` | Cleaning website permissions without touching the rest of the configuration | Same as `sqlite3` |
 
-## Sobre el idioma
+## Language
 
-Browser-Cleaner está en español: menús, ayuda, mensajes y comentarios del código. No hay versión en inglés todavía.
+Browser-Cleaner includes English and Spanish.
 
-**Mini roadmap**, sujeto a que haya interés real:
+The interface detects the system message locale at startup. If the detected locale is Spanish (starts with `es`, including variants such as `es_ES.UTF-8`), the interface starts in Spanish; otherwise it defaults to English. The precedence is `LC_ALL`, then `LC_MESSAGES`, then the first preference in `LANGUAGE`, and finally `LANG`.
 
-- [ ] Traducción completa de menús, ayuda y mensajes al inglés
-- [ ] Forma de elegir idioma (detección del sistema o flag `--lang`)
+The language can be switched at any time from the main menu with a single `L` key: `es → en` or `en → es`.
 
-Si te interesaría usarlo en inglés, dilo en un issue — es la señal que necesito para priorizarlo.
+For testing or forcing a language without changing the system locale, you can also set `BROWSER_CLEANER_LANG`:
 
-## Contribuir
+```bash
+BROWSER_CLEANER_LANG=en ./script/browser-cleaner.sh
+BROWSER_CLEANER_LANG=es ./script/browser-cleaner.sh
+```
 
-Los issues y pull requests son bienvenidos — hay plantillas en `.github/` para reportar errores o proponer mejoras. La guía completa está en [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+Source-code comments are kept concise and written in English; user-facing interface text remains available in English and Spanish.
 
-## Licencia
+## Tests
 
-GPLv3. Consulta el archivo [LICENSE](LICENSE).
+A regression suite covering locale detection, English/Spanish UI, the `L` language toggle, menu tokens, help output, irreversible-operation preview/cancellation, output layout, and representative Firefox cleaning behavior is included in `tests/test_browser_cleaner.sh`.
+
+```bash
+./tests/test_browser_cleaner.sh
+```
+
+## Contributing
+
+Issues and pull requests are welcome — there are templates in `.github/` for reporting bugs or proposing features. The complete guide is in [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
+
+## License
+
+GPLv3. See the [LICENSE.txt](LICENSE.txt) file.
 
 ---
 
-Hecho por [Filonux](https://github.com/filonux).
+Made by [Filonux](https://github.com/filonux).
