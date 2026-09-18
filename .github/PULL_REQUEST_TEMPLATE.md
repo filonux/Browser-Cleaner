@@ -1,25 +1,25 @@
-## Descripción
+## Description
 
-Explica qué cambia este PR y por qué.
+Explain what this pull request changes and why.
 
-## Tipo de cambio
+## Type of change
 
-- [ ] Corrección de error
-- [ ] Función nueva
-- [ ] Cambio en la documentación (README, plantillas, etc.)
-- [ ] Refactor / limpieza interna sin cambio de comportamiento
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Documentation change (README, templates, etc.)
+- [ ] Refactor / internal cleanup with no behavior change
 
-## ¿Cómo lo probaste?
+## How did you test it?
 
-Describe en qué distro/entorno lo probaste y qué casos verificaste
+Describe the distribution/environment you tested on and which cases you verified.
 
-- Distro y versión:
-- Sesión: X11 / Wayland
+- Distribution and version:
+- Session: X11 / Wayland
 
 ## Checklist
 
-- [ ] Probé el script manualmente después de mis cambios y sigue funcionando
-- [ ] Pasé `shellcheck`y no introduje warnings nuevos
-- [ ] Los comentarios que añadí explican el *por qué*, no repiten lo obvio del *qué*
-- [ ] Actualicé el README si el cambio afecta al uso o los requisitos
-- [ ] No incluí archivos generados, temporales ni credenciales
+- [ ] I tested the script manually after my changes and it still works
+- [ ] I ran `shellcheck` and introduced no new warnings
+- [ ] Any comments I added explain why, rather than repeating what the code does
+- [ ] I updated the README if the change affects usage or requirements
+- [ ] I did not include generated files, temporary files, or credentials
