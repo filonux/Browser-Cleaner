@@ -1,8 +1,7 @@
-# Política de seguridad
+# Security Policy
 
-Browser-Cleaner es un script de uso local: si encuentras un problema real o fallo de seguridad, repórtalo en privado en vez de abrir un issue público.
+Browser-Cleaner is a local script. If you find a real bug or security issue, report it privately instead of opening a public issue.
 
-## Cómo reportarlo
+## How to report it
 
-Escribe a **filonux@proton.me** con una descripción del problema y, si puedes, los pasos para reproducirlo.
-
+Email **filonux@proton.me** with a description of the issue and, if possible, the steps to reproduce it.
