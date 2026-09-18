@@ -1,12 +1,12 @@
-# Código de conducta
+# Code of Conduct
 
-Este es un proyecto pequeño mantenido en tiempo libre. Para que sea un buen sitio donde participar, se espera lo siguiente de cualquier persona que comente, abra un issue o envíe un PR:
+This is a small project maintained in spare time. Everyone who comments, opens an issue, or submits a pull request is expected to help keep it a constructive place to participate:
 
-- **Sé respetuoso.** Está bien no estar de acuerdo con un enfoque o una decisión; no está bien faltar el respeto a quien la propuso.
-- **Sé concreto.** Ayuda mucho más un "esto falla así, en este entorno, con estos pasos" que una queja genérica.
-- **Ten paciencia.** El proyecto se mantiene por interés personal, no como trabajo a tiempo completo; las respuestas pueden tardar.
-- **No se tolera** el acoso, los comentarios discriminatorios, ni el lenguaje agresivo hacia otras personas del proyecto.
+- **Be respectful.** It is fine to disagree with an approach or decision; it is not fine to disrespect the person who proposed it.
+- **Be specific.** A report such as "this fails in this way, in this environment, with these steps" is much more useful than a generic complaint.
+- **Be patient.** The project is maintained out of personal interest, not as a full-time job; responses may take time.
+- **Harassment, discriminatory comments, and aggressive language toward other project participants are not tolerated.**
 
-## Aplicación
+## Enforcement
 
-El mantenedor puede editar, cerrar o eliminar issues, comentarios y PRs que no respeten lo anterior, y bloquear a quien reincida. Si presencias o sufres algo que no encaja con este código de conducta, puedes escribir directamente al mantenedor a través de los canales de contacto del perfil de GitHub.
+The maintainer may edit, close, or remove issues, comments, and pull requests that do not follow this code of conduct, and may block repeat offenders. If you witness or experience behavior that does not fit this code of conduct, you can contact the maintainer directly through the contact channels on their GitHub profile.
