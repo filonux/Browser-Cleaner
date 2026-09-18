@@ -16,7 +16,9 @@ Over time, every browser accumulates cache, history, cookies, sessions and tempo
 
 Browser-Cleaner detects which browsers you have installed, lets you choose which ones and what to clean, and tells you how much space you are going to recover before deleting anything.
 
-<img width="655" height="435" alt="browser-cleaner-menu" src="https://github.com/user-attachments/assets/9039ec58-c20b-47d6-ba8d-99fdc039e010" />
+<img width="651" height="439" alt="menu-Browser-Cleaner-en" src="https://github.com/user-attachments/assets/f0efec72-2d65-4b40-ac2f-191b5f2f1e23" />
+<img width="643" height="491" alt="Browser-Cleaner-options-en" src="https://github.com/user-attachments/assets/058e3f40-f5ea-4f29-8e46-1af355cbf188" />
+
 
 ## What it does exactly
 
