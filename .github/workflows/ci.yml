@@ -1,0 +1,196 @@
+# Continuous integration for Browser-Cleaner.
+#
+# Runs ShellCheck and the regression suite in tests/test_browser_cleaner.sh.
+# Linux Mint 22.x is based on Ubuntu 24.04, so that is the primary target.
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+  # Weekly run: catches breakage caused by runner-image or package updates
+  # (jq, sqlite3, coreutils...) even when the repository itself is quiet.
+  schedule:
+    - cron: "23 5 * * 1"
+  # Lets release.yml reuse exactly the same checks as a release gate.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install ShellCheck if missing
+        run: |
+          if ! command -v shellcheck >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends shellcheck
+          fi
+          shellcheck --version | sed -n '2p'
+
+      - name: Bash syntax, line endings and permissions
+        run: |
+          mapfile -t scripts < <(git ls-files '*.sh')
+          if (( ${#scripts[@]} == 0 )); then
+            echo "::error::No shell scripts found"
+            exit 1
+          fi
+          status=0
+          for f in "${scripts[@]}"; do
+            bash -n "$f" || status=1
+            if grep -q $'\r' "$f"; then
+              echo "::error file=$f::CRLF line endings break Bash scripts on Linux; convert the file to LF"
+              status=1
+            fi
+            if [[ "$(git ls-files -s -- "$f" | cut -c1-6)" != 100755 ]]; then
+              echo "::warning file=$f::Not executable in git, but the README runs it directly. Fix with: git update-index --chmod=+x $f"
+            fi
+          done
+          exit "$status"
+
+      - name: ShellCheck
+        run: |
+          mapfile -t scripts < <(git ls-files '*.sh')
+          if report="$(shellcheck --external-sources --format=gcc "${scripts[@]}")"; then
+            echo "ShellCheck: no findings in ${#scripts[@]} file(s)"
+          else
+            printf '%s\n' "$report"
+            # Turn every finding into an inline annotation on the PR diff.
+            printf '%s\n' "$report" | awk -F: '{
+              level = ($4 ~ /error/) ? "error" : "warning"
+              msg = $5
+              for (i = 6; i <= NF; i++) msg = msg ":" $i
+              printf "::%s file=%s,line=%s,col=%s::%s\n", level, $1, $2, $3, msg
+            }'
+            exit 1
+          fi
+
+  test:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # ubuntu-24.04: primary target (Linux Mint 22.x is based on it).
+        # ubuntu-26.04: newest LTS, generally available since 2026-09-17.
+        #               `ubuntu-latest` migrates to it between 2026-10-19 and
+        #               2026-11-19, which is why the other jobs pin 24.04.
+        # ubuntu-22.04: Mint 21.x base. GitHub fully retires this label on
+        #               2027-04-17 (with scheduled brownouts before that);
+        #               remove it from the list then.
+        os: [ubuntu-24.04, ubuntu-26.04, ubuntu-22.04]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Without jq the suite silently skips its Chromium-permissions tests, so
+      # make sure both tools exist and the full suite really runs.
+      - name: Install test dependencies if missing
+        run: |
+          missing=()
+          for tool in jq sqlite3; do
+            command -v "$tool" >/dev/null || missing+=("$tool")
+          done
+          if (( ${#missing[@]} > 0 )); then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends "${missing[@]}"
+          fi
+
+      - name: Show environment
+        run: |
+          . /etc/os-release
+          echo "OS:      ${PRETTY_NAME}"
+          echo "Bash:    ${BASH_VERSION}"
+          echo "jq:      $(jq --version)"
+          echo "sqlite3: $(sqlite3 --version | cut -d' ' -f1-2)"
+
+      - name: Run test suite
+        run: |
+          status=0
+          bash tests/test_browser_cleaner.sh 2>&1 | tee test-output.log || status="${PIPESTATUS[0]}"
+
+          passed="$(grep -c '^ok - ' test-output.log || true)"
+          failed="$(grep -c '^not ok - ' test-output.log || true)"
+          skipped="$(grep -ci '^ok - .*skipped' test-output.log || true)"
+
+          # Inline annotations for each failing test.
+          grep '^not ok - ' test-output.log | while IFS= read -r line; do
+            echo "::error title=Test failed::${line#not ok - }"
+          done || true
+
+          . /etc/os-release
+          {
+            echo "### Test suite on ${PRETTY_NAME}"
+            echo
+            echo "| Passed | Failed | Skipped | Bash | jq | sqlite3 |"
+            echo "|---:|---:|---:|---|---|---|"
+            echo "| ${passed} | ${failed} | ${skipped} | ${BASH_VERSION%%(*} | $(jq --version) | $(sqlite3 --version | cut -d' ' -f1) |"
+            if (( failed > 0 )); then
+              echo
+              echo "**Failed tests**"
+              echo
+              grep '^not ok - ' test-output.log | sed 's/^not ok - /- /'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if (( status != 0 || failed > 0 )); then
+            echo "::error::Test suite failed (exit code ${status}, ${failed} failing test(s))"
+            exit 1
+          fi
+          if (( skipped > 0 )); then
+            echo "::error::${skipped} test(s) were skipped. CI must run the full suite; install the missing tool (jq or sqlite3)."
+            exit 1
+          fi
+          if (( passed == 0 )); then
+            echo "::error::No test results found; the suite did not run"
+            exit 1
+          fi
+
+      - name: Upload test log
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: test-output-${{ matrix.os }}
+          path: test-output.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Single stable check name to require in branch protection, instead of one
+  # entry per matrix leg.
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [lint, test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every job to succeed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Job results: ${RESULTS}"
+          read -ra results <<< "${RESULTS}"
+          for result in "${results[@]}"; do
+            [[ "${result}" == success ]] || exit 1
+          done

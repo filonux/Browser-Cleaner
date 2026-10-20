@@ -1,0 +1,129 @@
+# Publishes a GitHub release when a version tag is pushed.
+#
+#   1. The tag must match SCRIPT_VERSION in script/browser-cleaner.sh and the
+#      script header must contain a changelog entry for that version.
+#   2. The full CI workflow (ShellCheck + tests) must pass.
+#   3. Only then are browser-cleaner.sh and its SHA256SUMS attached to a release
+#      whose notes are taken from that changelog entry.
+#
+# To release: bump SCRIPT_VERSION, add the changelog entry, update the version
+# asserted in tests/test_browser_cleaner.sh, merge, then:
+#   git tag vX.Y.Z && git push origin vX.Y.Z
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  verify:
+    name: Verify tag and changelog
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check tag against SCRIPT_VERSION and changelog
+        id: meta
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="${TAG#v}"
+          script_version="$(sed -n 's/^SCRIPT_VERSION="\([^"]*\)".*/\1/p' script/browser-cleaner.sh)"
+          if [[ "${version}" != "${script_version}" ]]; then
+            echo "::error::Tag ${TAG} does not match SCRIPT_VERSION (${script_version:-not found}) in script/browser-cleaner.sh"
+            exit 1
+          fi
+          if ! grep -Eq "^#[[:space:]]+${version//./\\.}[[:space:]]+-[[:space:]]" script/browser-cleaner.sh; then
+            echo "::error::No changelog entry for ${version} in the header of script/browser-cleaner.sh"
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  release:
+    name: Publish release
+    needs: [verify, ci]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+      VERSION: ${{ needs.verify.outputs.version }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build release assets and notes
+        run: |
+          mkdir dist
+          cp script/browser-cleaner.sh dist/browser-cleaner.sh
+          (cd dist && sha256sum browser-cleaner.sh > SHA256SUMS)
+
+          # Changelog entry for this version: the first line plus its indented
+          # continuation lines, joined into one paragraph.
+          entry="$(awk -v ver="${VERSION}" '
+            $1 == "#" && $2 == ver && $3 == "-" {
+              found = 1
+              line = $0
+              sub(/^#[ \t]+[^ \t]+[ \t]+-[ \t]+/, "", line)
+              text = line
+              next
+            }
+            found && $1 == "#" && NF > 1 && $2 !~ /^[0-9]+\.[0-9]+/ {
+              line = $0
+              sub(/^#[ \t]+/, "", line)
+              text = text " " line
+              next
+            }
+            found { exit }
+            END { if (text != "") print text }
+          ' script/browser-cleaner.sh)"
+          if [[ -z "${entry}" ]]; then
+            echo "::error::Could not extract the changelog entry for ${VERSION}"
+            exit 1
+          fi
+
+          {
+            printf '## Browser-Cleaner %s\n\n' "${VERSION}"
+            printf '%s\n\n' "${entry}"
+            printf '### Verify the download\n\n'
+            printf '    sha256sum -c SHA256SUMS\n    chmod +x browser-cleaner.sh\n'
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Create or update the GitHub release
+        run: |
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            # Re-run of a previous attempt: refresh notes and assets in place.
+            gh release edit "${TAG}" --title "Browser-Cleaner ${VERSION}" --notes-file release-notes.md
+            gh release upload "${TAG}" dist/browser-cleaner.sh dist/SHA256SUMS --clobber
+          else
+            gh release create "${TAG}" dist/browser-cleaner.sh dist/SHA256SUMS \
+              --title "Browser-Cleaner ${VERSION}" \
+              --notes-file release-notes.md \
+              --verify-tag
+          fi
